@@ -12,8 +12,8 @@ This implementation is built on [Pytorch Lightning](https://pytorchlightning.ai/
 with some components from [Classy Vision](https://classyvision.ai/).
 
 ## Datasets used
-- DISC (Facebook Image Similarity Challenge 2021).[Link](https://ai.meta.com/datasets/disc21-dataset/)
-- Copydays.[Link](https://web.archive.org/web/20160414091603/https://lear.inrialpes.fr/~jegou/data.php)
+- DISC (Facebook Image Similarity Challenge 2021)[[Link]](https://ai.meta.com/datasets/disc21-dataset/)
+- Copydays[[Link]](https://web.archive.org/web/20160414091603/https://lear.inrialpes.fr/~jegou/data.php)
 
 ## Unsupervised Knowledge Distillation
 - similarity distillation 
