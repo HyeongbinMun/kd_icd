@@ -45,7 +45,7 @@ with some components from [Classy Vision](https://classyvision.ai/).
     <td align="right">512</td>
     <td align="right">67.4%</td>
     <td align="right">75.0%</td>
-    <td><a href="">link</a></td>
+    <td><a href="https://drive.google.com/file/d/10Jxr4aCiBA5nkmU3kBJaopzOrSvqi9RF/view?usp=drive_link">link</a></td>
   </tr>
   <tr>
     <td>MobileNet-v3</td>
