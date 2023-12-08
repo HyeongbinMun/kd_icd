@@ -15,11 +15,6 @@ services:
     tty: true
     stdin_open: true
     volumes:
-      - type: volume
-        source: nfs_shared
-        target: /nfs_shared
-        volume:
-          nocopy: true
       - "/home/mmlab/hdd/grad/sscd/sscd/:/user"
       - "/home/mmlab/hdd/dataset:/dataset"
     ports:
@@ -27,11 +22,4 @@ services:
       - "31402:22"
     expose:
       - "8080"
-
-volumes:
-  nfs_shared:
-    driver_opts:
-      type: "nfs"
-      o: "addr=mlsun.sogang.ac.kr,nolock,soft,rw"
-      device: ":/volume1/nfs_shared"
 
