@@ -84,6 +84,16 @@ with some components from [Classy Vision](https://classyvision.ai/).
 ## How to use
 
 ### 컨테이너 시작
+ - docker-compose.yml 파일 수정
+```
+    volumes: # 본인의 local 경로로 수정
+      - "/home/mmlab/hdd/grad/sscd/sscd/:/user"
+      - "/home/mmlab/hdd/dataset:/dataset"
+    ports:   # 알맞은 포트 번호로 변경
+      - "31400:8000"
+      - "31402:22"
+```
+ - 도커 시작
 ```
 git clone https://github.com/HyeongbinMun/kd_icd.git
 cd kd_icd
