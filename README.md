@@ -86,6 +86,8 @@ with some components from [Classy Vision](https://classyvision.ai/).
 ### 컨테이너 시작
  - docker-compose.yml 파일 수정
 ```
+git clone https://github.com/HyeongbinMun/kd_icd.git
+cd kd_icd
     volumes: # 본인의 local 경로로 수정
       - "/home/mmlab/hdd/grad/sscd/sscd/:/user"
       - "/home/mmlab/hdd/dataset:/dataset"
@@ -95,8 +97,6 @@ with some components from [Classy Vision](https://classyvision.ai/).
 ```
  - 도커 시작
 ```
-git clone https://github.com/HyeongbinMun/kd_icd.git
-cd kd_icd
 docker-compose up -d --build
 docker attach grad_etri
 ```
