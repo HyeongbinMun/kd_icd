@@ -30,8 +30,66 @@ with some components from [Classy Vision](https://classyvision.ai/).
 - MobileNet-V3-Large
 - ViT-S
 - MobileViT
+<table style="margin: auto">
+  <tr>
+    <th>model</th>
+    <th># of<br />params[M]</th>
+    <th>Feature Size</th>
+    <th>µAP</th>
+    <th>Acc@1</th>
+    <th>download</th>
+  </tr>
+  <tr>
+    <td>EfficientNet-b0</td>
+    <td align="right">4.7</td>
+    <td align="right">512</td>
+    <td align="right">67.4%</td>
+    <td align="right">75.0%</td>
+    <td><a href="">link</a></td>
+  </tr>
+  <tr>
+    <td>MobileNet-v3</td>
+    <td align="right">4.9</td>
+    <td align="right">512</td>
+    <td align="right">68.0%</td>
+    <td align="right">74.3%</td>
+    <td><a href="">link</a></td>
+  </tr>
+  <tr>
+    <td>MobileViT-s</td>
+    <td align="right">5.3</td>
+    <td align="right">512</td>
+    <td align="right">69.2%</td>
+    <td align="right">75.4%</td>
+    <td><a href="">link</a></td>
+  </tr>
+  <tr>
+    <td>Regnet_y</td>
+    <td align="right">6.0</td>
+    <td align="right">512</td>
+    <td align="right">70.9%</td>
+    <td align="right">76.5%</td>
+    <td><a href="">link</a></td>
+  </tr>
+  <tr>
+    <td>ResNet-18</td>
+    <td align="right">11.2</td>
+    <td align="right">512</td>
+    <td align="right">62.5%</td>
+    <td align="right">69.5%</td>
+    <td><a href="">link</a></td>
+  </tr>
+</table>
 
 ## How to use
+
+### 컨테이너 시작
+```
+git clone https://github.com/HyeongbinMun/kd_icd.git
+cd kd_icd
+docker-compose up -d --build
+docker attach grad_etri
+```
 
 ### Install miniconda3
 ```
