@@ -133,12 +133,12 @@ conda install -c pytorch faiss-gpu
 
 ### Training
 ```
-sh train.sh
+sh sscd/train.sh
 ```
 
 ### Evaluation
 ```
-sh disc_eval.sh
+sh sscd/disc_eval.sh
 ```
 
 ## Citation
