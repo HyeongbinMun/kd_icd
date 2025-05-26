@@ -1,0 +1,25 @@
+version: '2.3'
+
+services:
+  main:
+    container_name: grad_etri
+    ipc: host
+    shm_size: 256g  
+    build:
+      context: .
+      dockerfile: Dockerfile
+    runtime: nvidia
+    env_file:
+      - docker-compose-env/main.env
+    restart: always
+    tty: true
+    stdin_open: true
+    volumes:
+      - "/home/mmlab/Documents/kd_icd:/workspace"
+      - "/media/mmlab/hdd:/hdd"
+    ports:
+      - "31400:8000"
+      - "31402:22"
+    expose:
+      - "8080"
+
