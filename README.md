@@ -126,7 +126,7 @@ conda create -n test python=3.8
 
 ### Library 설치
 ```
-conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia
+pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu116
 pip install -r reqirements.txt
 conda install -c pytorch faiss-gpu
 ```

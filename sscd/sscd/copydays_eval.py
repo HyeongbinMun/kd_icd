@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
@@ -6,155 +5,154 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import logging
-import os
-
-import faiss
-import numpy as np
-import pandas as pd
-
-from lib import initialize  # noqa
-from lib.inference import Inference
-from sscd.datasets.copydays import Copydays
-from sscd.datasets.image_folder import ImageFolder
-from sscd.lib.util import parse_bool
-
-# After initialize import to silence an error.
-from classy_vision.dataset.transforms import build_transforms
-
-parser = argparse.ArgumentParser()
-inference_parser = parser.add_argument_group("Inference")
-Inference.add_parser_args(inference_parser)
-inference_parser.add_argument(
-    "--resize_long_edge",
-    default=False,
-    type=parse_bool,
-    help=(
-        "Preprocess images by resizing the long edge to --size. "
-        "Has no effect if --preserve_aspect_ratio is not set."
-    ),
-)
-
-cd_parser = parser.add_argument_group("Copydays")
-cd_parser.add_argument("--copydays_path", required=True)
-cd_parser.add_argument("--distractor_path", required=True)
-cd_parser.add_argument("--codec_train_path")
-cd_parser.add_argument(
-    "--codecs",
-    default="Flat",
-    help="FAISS codecs for postprocessing embeddings as ';' separated strings"
-    "in index_factory format",
-)
-cd_parser.add_argument("--metadata", help="Metadata column to put in the result CSV")
-
-logging.basicConfig(
-    format="%(asctime)s %(levelname)-8s %(message)s",
-    level=logging.WARNING,
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger("copydays_eval.py")
-logger.setLevel(logging.INFO)
+import enum
+import torch
+from torch import nn
+from torch.nn import functional as F
+from torchvision.models.resnet import resnet18, resnet50, resnext101_32x8d
+from torchvision.models.efficientnet import efficientnet_b0
+from torchvision.models.mobilenetv3 import mobilenet_v3_large
+from torchvision.models.regnet import regnet_x_800mf, regnet_y_800mf
+from torchvision.models.mobilenet import mobilenet_v2
+from classy_vision.models import build_model
+from .gem_pooling import GlobalGeMPool2d
+from .mobilenetv2 import MobilenetV2
+from pytorch_lightning import LightningModule
 
 
-def get_transforms(size, preserve_aspect_ratio, resize_long_edge):
-    resize_long_edge = preserve_aspect_ratio and resize_long_edge
-    resize_name = "ResizeLongEdge" if resize_long_edge else "Resize"
-    resize_size = size if preserve_aspect_ratio else [size, size]
-    return build_transforms(
-        [
-            {"name": resize_name, "size": resize_size},
-            {"name": "ToTensor"},
-            {
-                "name": "Normalize",
-                "mean": [0.485, 0.456, 0.406],
-                "std": [0.229, 0.224, 0.225],
-            },
-        ]
-    )
+class L2N(nn.Module):
+    def __init__(self, eps=1e-6):
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, x):
+        return x / (torch.norm(x, p=2, dim=1, keepdim=True) + self.eps).expand_as(x)
 
 
-def evaluate(
-    embeddings, distractors, train, copydays: Copydays, index_type: str, k=100
-):
-    D = embeddings.shape[1]
-    faiss_index = faiss.index_factory(D, index_type)
-    if not faiss_index.is_trained:
-        assert (
-            train is not None
-        ), f"A training dataset must be provided for {index_type} search"
-        faiss_index.train(train)
-    faiss_index.add(copydays.get_block_embeddings(embeddings, "original"))
-    faiss_index.add(distractors)
-    distances, ids = faiss_index.search(embeddings, k)
-    assert np.isfinite(
-        distances
-    ).all(), "Non-finite distances found; this often means whitening failed"
-    metrics = copydays.eval_result(ids, distances)
-    metrics = dict(strong_mAP=metrics["strong mAP"], overall_uAP=metrics["macro AP"])
-    return metrics
+class Implementation(enum.Enum):
+    CLASSY_VISION = enum.auto()
+    TORCHVISION = enum.auto()
+    TIMM = enum.auto()
+    VIT = enum.auto()
 
 
-def evaluate_all(
-    copydays_outputs,
-    distractor_outputs,
-    train_outputs,
-    copydays: Copydays,
-    codecs: str,
-    metadata=None,
-    k=100,
-):
-    codecs = codecs.split(";")
-    instance_ids = copydays_outputs["instance_id"]
-    embeddings = copydays_outputs["embeddings"]
-    order = np.argsort(instance_ids)
-    instance_ids = instance_ids[order]
-    embeddings = embeddings[order, :]
-    N, D = embeddings.shape
-    assert N == len(copydays)
-    assert np.all(instance_ids == np.arange(N, dtype=np.int64))
-    distractors = distractor_outputs["embeddings"]
-    train = train_outputs["embeddings"] if train_outputs else None
-    records = []
-    for codec in codecs:
-        record = {"codec": codec}
-        metrics = evaluate(embeddings, distractors, train, copydays, codec, k=k)
-        record.update(metrics)
-        logger.info(f"Metrics: {record}")
-        records.append(record)
-    df = pd.DataFrame(records)
-    if metadata:
-        df["metadata"] = metadata
-    return df
+class Backbone(enum.Enum):
+    CV_RESNET18 = ("resnet18", 512, Implementation.CLASSY_VISION)
+    CV_RESNET50 = ("resnet50", 2048, Implementation.CLASSY_VISION)
+    CV_RESNEXT101 = ("resnext101_32x4d", 2048, Implementation.CLASSY_VISION)
+
+    TV_EFFICIENTNET_B0 = (efficientnet_b0, 1280, Implementation.TORCHVISION)
+    TV_MOBILENETV2 = (mobilenet_v2, 320, Implementation.TORCHVISION)
+    TV_MOBILENETV3 = (mobilenet_v3_large, 1280, Implementation.TORCHVISION)  #
+    TV_REGNET_X = (regnet_x_800mf, 672, Implementation.TORCHVISION)
+    TV_REGNET_Y = (regnet_y_800mf, 440,
+                   Implementation.TORCHVISION)  # 6,432,512 sum(p.numel() for p in models.regnet.regnet_y_800mf().parameters())
+
+    TV_RESNET18 = (resnet18, 512, Implementation.TORCHVISION)
+    TV_RESNET50 = (resnet50, 2048, Implementation.TORCHVISION)
+    #   TV_RESNEXT101 = (resnext101_32x8d, 2048, Implementation.TORCHVISION)
+
+    TIMM_MOBILEVIT_S = ("mobilevit_s", 640, Implementation.VIT)
+
+    def build(self, dims: int):
+        impl = self.value[2]
+        if impl == Implementation.CLASSY_VISION:
+            model = build_model({"name": self.value[0]})
+            # Remove head exec wrapper, which we don't need, and breaks pickling
+            # (needed for spawn dataloaders).
+            return model.classy_model
+        if impl == Implementation.TORCHVISION:
+            try:
+                fn = self.value[0]
+                if self.name.startswith("TV_RESNET"):
+                    return fn(num_classes=dims, zero_init_residual=True)
+                else:
+                    return fn(num_classes=dims)
+            except Exception as e:
+                raise AssertionError("Model implementation not handled: %s (%s)" % (self.name, str(e)))
 
 
-def main(args):
-    logger.info("Setting up dataset")
-    transforms = get_transforms(
-        args.size, args.preserve_aspect_ratio, args.resize_long_edge
-    )
-    copydays = Copydays(args.copydays_path, transforms)
-    copydays_embeddings = Inference.inference(args, copydays, "copydays")
-    distractors = ImageFolder(args.distractor_path, img_transform=transforms)
-    distractor_embeddings = Inference.inference(args, distractors, "distractors")
-    if args.codec_train_path:
-        codec_train = ImageFolder(args.codec_train_path, img_transform=transforms)
-        train_embeddings = Inference.inference(args, codec_train, "codec_train")
-    else:
-        train_embeddings = None
-    df = evaluate_all(
-        copydays_embeddings,
-        distractor_embeddings,
-        train_embeddings,
-        copydays,
-        args.codecs,
-        metadata=args.metadata,
-    )
-    csv_filename = os.path.join(args.output_path, "copydays_metrics.csv")
-    df.to_csv(csv_filename, index=False)
-    with open(csv_filename, "r") as f:
-        logger.info("Metric CSV:\n%s", f.read())
+class L2Norm(nn.Module):
+    def forward(self, x):
+        return F.normalize(x)
 
 
-if __name__ == "__main__":
-    args = parser.parse_args()
-    main(args)
+class Model(LightningModule):
+    def __init__(self, backbone: str, dims: int, pool_param: float):
+        super().__init__()
+        self.backbone_type = Backbone[backbone]
+        self.backbone = self.backbone_type.build(dims=dims)
+        impl = self.backbone_type.value[2]
+        if impl == Implementation.CLASSY_VISION:
+            self.embeddings = nn.Sequential(
+                GlobalGeMPool2d(pool_param),
+                nn.Linear(self.backbone_type.value[1], dims),
+                L2Norm(),
+            )
+        elif backbone == "TV_RESNET50":
+            self.backbone.avgpool = GlobalGeMPool2d(pool_param)
+
+        elif backbone == 'TV_EFFICIENTNET_B0':
+            self.backbone.avgpool = GlobalGeMPool2d(pool_param)
+            self.backbone.fc = nn.Identity()
+            self.embeddings = L2Norm()
+
+        elif backbone == 'TV_MOBILENETV2':
+            self.backbone = MobilenetV2()
+            self.embeddings = L2Norm()
+
+        elif backbone == 'TV_MOBILENETV3':
+            self.backbone.avgpool = GlobalGeMPool2d(pool_param)
+            self.embeddings = L2Norm()
+
+        elif backbone == 'TV_REGNET_Y_800MF':
+            self.backbone.avgpool = GlobalGeMPool2d(pool_param)
+            self.backbone.fc = nn.Identity()
+            self.embeddings = nn.Sequential(
+                nn.Linear(784, 512),
+                L2Norm()
+            )
+
+        elif impl == Implementation.TIMM:
+            if self.backbone_type.value[1] != dims:
+                self.backbone.global_pool = GlobalGeMPool2d(pool_param)
+                self.backbone.fc = nn.Identity()
+                self.backbone.classifier = nn.Identity()
+                self.embeddings = nn.Sequential(
+                    nn.Linear(self.backbone_type.value[1], dims),
+                    L2Norm(),
+                )
+            else:  # embedding size is 512
+                self.backbone.global_pool = GlobalGeMPool2d(pool_param)
+                # self.backbone.fc = nn.Identity()
+                self.backbone.fc = nn.Linear(512, 512)
+                self.backbone.classifier = nn.Identity()
+                self.embeddings = L2Norm()
+
+        elif impl == Implementation.VIT:
+            self.backbone.head.global_pool = GlobalGeMPool2d(pool_param, keep_res=False)
+            self.backbone.head.fc = nn.Linear(self.backbone_type.value[1], dims)
+            self.embeddings = L2Norm()
+
+    # def forward(self, x, mode=None):
+    #     x = self.backbone(x)
+    #     if mode == 'teacher':
+    #         return x
+    #     else:
+    #         return self.embeddings(x)
+    def forward(self, x, mode=None):
+        if isinstance(self.backbone, MobilenetV2):
+            return self.backbone(x, mode="embedding_only")
+        x = self.backbone(x)
+        if mode == 'teacher':
+            return x
+        return self.embeddings(x)
+
+    @classmethod
+    def add_arguments(cls, parser: argparse.ArgumentParser):
+        parser = parser.add_argument_group("Model")
+        parser.add_argument(
+            "--backbone", default="TV_RESNET18", choices=[b.name for b in Backbone]
+        )
+        parser.add_argument("--dims", default=320, type=int)
+        parser.add_argument("--pool_param", default=3, type=float)

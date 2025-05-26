@@ -71,7 +71,6 @@ class DISCEvalDataset:
         train_path: Optional[str] = None,
         gt_path: Optional[str] = None,
     ):
-
         query_path = os.path.join(path, "dev_queries")
         ref_path = os.path.join(path, "references")
         train_path = os.path.join(path, "train") if include_train else None
@@ -186,7 +185,6 @@ class DISCTestDataset:
         ref_path = os.path.join(path, "references_test")
         train_path = os.path.join(path, "train_test") if include_train else None
         gt_path = os.path.join(path, "dev_queries_groundtruth_test.csv")
-
         self.files, self.metadata = self.read_files(ref_path, self.SPLIT_REF)
         query_files, query_metadata = self.read_files(query_path, self.SPLIT_QUERY)
         self.files.extend(query_files)
@@ -218,9 +216,8 @@ class DISCTestDataset:
             if self.transform:
                 img = self.transform(img)
         except Exception as e:
-            print(f"❌ Transform 과정에서 실패: {filename}\n에러: {e}", flush=True)
+            print(f"Transform 과정에서 실패: {filename}\n에러: {e}", flush=True)
             raise e
-
         sample = {"input": img, "instance_id": idx}
         sample.update(self.metadata[idx])
         return sample

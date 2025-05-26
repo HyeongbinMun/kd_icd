@@ -19,7 +19,7 @@ from numpy import linalg
 import pandas as pd
 
 from lib import initialize  # noqa
-from lib.inference_mobilenetv2 import Inference
+from lib.inference import Inference
 from sscd.train import DISCData
 from sscd.datasets.disc import DISCTestDataset
 from sscd.lib.util import parse_bool
@@ -70,6 +70,7 @@ def get_codecs(dims, is_l2_normalized, codecs_arg):
     if is_l2_normalized:
         # return ["Flat", "PCAW512,L2norm,Flat"]
         return ["Flat"]
+
     return ["Flat", "L2norm,Flat", f"PCAW{dims},L2norm,Flat", f"L2norm,PCAW{dims},Flat"]
 
 

@@ -6,3 +6,4 @@ sscd/disc_eval.py --disc_path /dataset/DISC --gpus=2 \
   --backbone TV_EFFICIENTNET_B0 \
   --dims 512 \
   --student /workspace/weights/eff_b0.pt
+

@@ -152,9 +152,11 @@ def remove_duplicates(predictions: List[PredictedMatch]) -> List[PredictedMatch]
             unique_predictions.append(p)
     return unique_predictions
 
+
 def check_duplicates(predictions: List[PredictedMatch]) -> List[PredictedMatch]:
     """
     Raise an exception if predictions contains duplicates
+<<<<<<< HEAD
     (i.e., several predictions for the same (query, db) pair).
     Also print the duplicate pairs and their indices.
     """

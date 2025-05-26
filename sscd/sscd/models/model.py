@@ -61,6 +61,7 @@ class Backbone(enum.Enum):
             return model.classy_model
         if impl == Implementation.TORCHVISION:
             try:
+<<<<<<< HEAD
                 fn = self.value[0]
                 if self.name.startswith("TV_RESNET"):
                     return fn(num_classes=dims, zero_init_residual=True)
@@ -68,6 +69,11 @@ class Backbone(enum.Enum):
                     return fn(num_classes=dims)
             except Exception as e:
                 raise AssertionError("Model implementation not handled: %s (%s)" % (self.name, str(e)))
+=======
+                return self.value[0](num_classes=dims, zero_init_residual=True)
+            except:
+                raise AssertionError("Model implementation not handled: %s" % (self.name,))
+>>>>>>> ee205b0e7833d8f0b978f6509e8510c8e1026ffc
 
 
 class L2Norm(nn.Module):
@@ -95,10 +101,13 @@ class Model(LightningModule):
             self.backbone.fc = nn.Identity()
             self.embeddings = L2Norm()
 
+<<<<<<< HEAD
         elif backbone == 'TV_MOBILENETV2':
             self.backbone = MobilenetV2()
             self.embeddings = L2Norm()
 
+=======
+>>>>>>> ee205b0e7833d8f0b978f6509e8510c8e1026ffc
         elif backbone == 'TV_MOBILENETV3':
             self.backbone.avgpool = GlobalGeMPool2d(pool_param)
             self.embeddings = L2Norm()
@@ -132,6 +141,7 @@ class Model(LightningModule):
             self.backbone.head.fc = nn.Linear(self.backbone_type.value[1], dims)
             self.embeddings = L2Norm()
 
+<<<<<<< HEAD
     # def forward(self, x, mode=None):
     #     x = self.backbone(x)
     #     if mode == 'teacher':
@@ -145,6 +155,14 @@ class Model(LightningModule):
         if mode == 'teacher':
             return x
         return self.embeddings(x)
+=======
+    def forward(self, x, mode=None):
+        x = self.backbone(x)
+        if mode == 'teacher':
+            return x
+        else:
+            return self.embeddings(x)
+>>>>>>> ee205b0e7833d8f0b978f6509e8510c8e1026ffc
 
     @classmethod
     def add_arguments(cls, parser: argparse.ArgumentParser):
@@ -152,5 +170,9 @@ class Model(LightningModule):
         parser.add_argument(
             "--backbone", default="TV_RESNET18", choices=[b.name for b in Backbone]
         )
+<<<<<<< HEAD
         parser.add_argument("--dims", default=320, type=int)
+=======
+        parser.add_argument("--dims", default=512, type=int)
+>>>>>>> ee205b0e7833d8f0b978f6509e8510c8e1026ffc
         parser.add_argument("--pool_param", default=3, type=float)
