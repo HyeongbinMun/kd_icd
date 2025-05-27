@@ -127,12 +127,12 @@ pip install classy-vision augly timm
 
 ### Training
 ```
-sh sscd/train.sh
+sh scripts/train_mobilenetv2.sh
 ```
 
 ### Evaluation
 ```
-sh sscd/disc_eval.sh
+sh scripts/disc_eval_mobilenetv2.sh
 ```
 
 ## Citation
