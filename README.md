@@ -103,32 +103,26 @@ docker attach grad_etri
 
 ### Install miniconda3
 ```
-wget \
-https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-&& mkdir /root/.conda \
-&& bash Miniconda3-latest-Linux-x86_64.sh -b \
-&& rm -f Miniconda3-latest-Linux-x86_64.sh
-
-.bashrc에 다음 코드 추가
-
-export PATH=”/root/miniconda3/bin:$PATH”
-
-source .bashrc
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
+echo '. $HOME/miniconda3/etc/profile.d/conda.sh' >> ~/.bashrc
+echo 'export PATH="$HOME/miniconda3/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-### 컨테이너 재시작
-
+### conda 가상환경 생성
 ```
-exit → attach
-
-conda create -n test python=3.8
+conda --version
+conda create -n disc python=3.8 -y
+conda activate disc
 ```
 
 ### Library 설치
 ```
-pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu116
-pip install -r reqirements.txt
-conda install -c pytorch faiss-gpu
+conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia
+conda install -c conda-forge "pytorch-lightning>=1.5,<1.6" lightning-bolts faiss-cpu python-magic pandas numpy
+pip install classy-vision augly timm
 ```
 
 ### Training
